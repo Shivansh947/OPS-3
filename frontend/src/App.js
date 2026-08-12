@@ -1582,6 +1582,28 @@ export default function App() {
               )}
             </div>
           </div>
+
+          {/* Delivery history */}
+          {deliveries.length > 0 && (
+            <div>
+              <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3">Your deliveries</h2>
+              <div className="space-y-3">
+                {deliveries.map(d => (
+                  <div key={d.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between" data-testid={`delivery-history-${d.id}`}>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded-full uppercase">{d.vehicle_type}</span>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${d.status === 'Delivered' ? 'bg-emerald-100 text-emerald-700' : d.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{d.status}</span>
+                      </div>
+                      <p className="text-sm font-bold text-slate-900 mt-1">📦 {d.pickup_location} → {d.drop_location}</p>
+                      <p className="text-xs text-slate-500">{d.parcel_type} · {d.distance_km} km · To {d.receiver_name}</p>
+                    </div>
+                    <p className="text-xl font-black text-blue-700">₹{d.fare}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </main>
       )}
 
