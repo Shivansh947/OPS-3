@@ -1540,7 +1540,8 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className="bg-slate-50 rounded-2xl p-3 space-y-1 text-sm">
+                  <div className="bg-slate-50 rounded-2xl p-3 space-y-1 text-sm" data-testid="delivery-info-panel">
+                    <p className="text-xs text-slate-600">Sender: <b className="text-slate-800">{currentDelivery.user_name}</b> · {currentDelivery.user_phone || '—'}</p>
                     <p className="text-xs text-slate-600">To: <b>{currentDelivery.receiver_name}</b> · {currentDelivery.receiver_phone}</p>
                     <p className="text-xs text-slate-600">Parcel: {currentDelivery.parcel_type}{currentDelivery.parcel_notes ? ` · ${currentDelivery.parcel_notes}` : ''}</p>
                     <p className="text-xs text-slate-600">Fare: <b className="text-blue-700">₹{currentDelivery.fare}</b> · Cash on drop</p>
@@ -1577,7 +1578,17 @@ export default function App() {
                   <div className="h-56 rounded-2xl overflow-hidden border border-slate-200" data-testid="delivery-preview-map">
                     <MapView pickup={dlvPickupCoords} destination={dlvDropCoords} routeCoords={dlvRouteCoords} />
                   </div>
-                  <p className="text-xs text-slate-500">Fill in receiver details and hit book. Cash is collected on drop-off.</p>
+                  {deliveries.length > 0 ? (
+                    <div className="bg-slate-50 rounded-2xl p-3 space-y-1 text-sm" data-testid="delivery-info-panel">
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Last booking</p>
+                      <p className="text-xs text-slate-600">Sender: <b className="text-slate-800">{deliveries[0].user_name}</b> · {deliveries[0].user_phone || '—'}</p>
+                      <p className="text-xs text-slate-600">To: <b>{deliveries[0].receiver_name}</b> · {deliveries[0].receiver_phone}</p>
+                      <p className="text-xs text-slate-600">Parcel: {deliveries[0].parcel_type}{deliveries[0].parcel_notes ? ` · ${deliveries[0].parcel_notes}` : ''}</p>
+                      <p className="text-xs text-slate-600">Fare: <b className="text-blue-700">₹{deliveries[0].fare}</b> · Cash on drop</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">Fill in receiver details and hit book. Cash is collected on drop-off.</p>
+                  )}
                 </div>
               )}
             </div>
