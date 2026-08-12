@@ -283,6 +283,24 @@ export default function App() {
     } catch (err) { setError(err.response?.data?.detail || 'Signup failed'); }
     finally { setLoading(false); }
   };
+  const quickLogin = async (role) => {
+    const creds = {
+      user: { email: 'user@ops.com', password: 'user123' },
+      driver: { email: 'driver@ops.com', password: 'driver123' },
+      admin: { email: 'admin@ops.com', password: 'admin123' }
+    }[role];
+    if (!creds) return;
+    setLoading(true); setError('');
+    try {
+      const res = await axios.post(`${API}/auth/login`, creds, { withCredentials: true });
+      setToken(res.data.token); setUser(res.data.user);
+      localStorage.setItem('ops_user', JSON.stringify(res.data.user));
+      setSuccessMsg(`Welcome back, ${res.data.user.name}!`);
+      setActiveTab(res.data.user.role === 'driver' ? 'driver_dashboard' : res.data.user.role === 'admin' ? 'admin_panel' : 'home');
+    } catch (err) { setError(err.response?.data?.detail || 'Login failed'); }
+    finally { setLoading(false); }
+  };
+
   const logout = () => {
     setToken(''); setUser(null); setCurrentRide(null);
     localStorage.removeItem('ops_user');
@@ -1833,6 +1851,34 @@ export default function App() {
               <h2 className="text-2xl font-black text-slate-900 mt-3">{authMode === 'login' ? 'Welcome back' : 'Create your OPS account'}</h2>
               <p className="text-sm text-slate-500 mt-1">On-time rides, always fare-locked.</p>
             </div>
+
+            {authMode === 'login' && (
+              <div className="grid grid-cols-3 gap-2" data-testid="quick-access-panel">
+                <button type="button" onClick={() => quickLogin('user')} disabled={loading} data-testid="quick-login-rider-btn"
+                  className="bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-black text-xs py-3 rounded-2xl transition disabled:opacity-60 flex flex-col items-center space-y-1">
+                  <Navigation className="h-4 w-4" />
+                  <span>Rider</span>
+                </button>
+                <button type="button" onClick={() => quickLogin('driver')} disabled={loading} data-testid="quick-login-captain-btn"
+                  className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-black text-xs py-3 rounded-2xl transition disabled:opacity-60 flex flex-col items-center space-y-1">
+                  <Bike className="h-4 w-4" />
+                  <span>Captain</span>
+                </button>
+                <button type="button" onClick={() => quickLogin('admin')} disabled={loading} data-testid="quick-login-admin-btn"
+                  className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-black text-xs py-3 rounded-2xl transition disabled:opacity-60 flex flex-col items-center space-y-1">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Admin</span>
+                </button>
+              </div>
+            )}
+
+            {authMode === 'login' && (
+              <div className="flex items-center space-x-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <span className="flex-1 h-px bg-slate-200"></span>
+                <span>or continue with email</span>
+                <span className="flex-1 h-px bg-slate-200"></span>
+              </div>
+            )}
 
             <form onSubmit={authMode === 'login' ? handleLogin : handleSignup} className="space-y-3">
               {authMode === 'signup' && (
