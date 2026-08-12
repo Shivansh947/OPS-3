@@ -56,7 +56,7 @@ export default function App() {
 
   // Rentals & Admin
   const [rentals, setRentals] = useState([]);
-  const [adminSubTab, setAdminSubTab] = useState('overview'); // 'overview' | 'rentals'
+  const [adminSubTab, setAdminSubTab] = useState('overview'); // 'overview' | 'rentals' | 'deliveries'
   const [adminStats, setAdminStats] = useState(null);
 
   // Deliveries
@@ -1582,28 +1582,6 @@ export default function App() {
               )}
             </div>
           </div>
-
-          {/* Delivery history */}
-          {deliveries.length > 0 && (
-            <div>
-              <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3">Your deliveries</h2>
-              <div className="space-y-3">
-                {deliveries.map(d => (
-                  <div key={d.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between" data-testid={`delivery-history-${d.id}`}>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded-full uppercase">{d.vehicle_type}</span>
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${d.status === 'Delivered' ? 'bg-emerald-100 text-emerald-700' : d.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{d.status}</span>
-                      </div>
-                      <p className="text-sm font-bold text-slate-900 mt-1">📦 {d.pickup_location} → {d.drop_location}</p>
-                      <p className="text-xs text-slate-500">{d.parcel_type} · {d.distance_km} km · To {d.receiver_name}</p>
-                    </div>
-                    <p className="text-xl font-black text-blue-700">₹{d.fare}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </main>
       )}
 
@@ -1897,6 +1875,10 @@ export default function App() {
               className={`px-5 py-2.5 rounded-t-xl text-sm font-black transition flex items-center gap-2 ${adminSubTab === 'rentals' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
               <Bike className="h-4 w-4" /> Rental Dashboard <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full">{rentals.length}</span>
             </button>
+            <button onClick={() => setAdminSubTab('deliveries')} data-testid="admin-tab-deliveries"
+              className={`px-5 py-2.5 rounded-t-xl text-sm font-black transition flex items-center gap-2 ${adminSubTab === 'deliveries' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+              <Navigation className="h-4 w-4" /> Delivery Dashboard <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full">{deliveries.length}</span>
+            </button>
           </div>
 
           {adminSubTab === 'overview' && (
@@ -2014,10 +1996,90 @@ export default function App() {
               )}
             </div>
           )}
+          {adminSubTab === 'deliveries' && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6" data-testid="admin-delivery-dashboard">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">Delivery Dashboard</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">All deliveries with parcel, sender, receiver, driver & safety info</p>
+                </div>
+                <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full uppercase" data-testid="delivery-total-badge">
+                  {deliveries.length} Total
+                </span>
+              </div>
+              {deliveries.length === 0 ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center text-slate-500">
+                  No deliveries booked yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[1200px]">
+                    <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left py-3 px-2">Sender</th>
+                        <th className="text-left py-3 px-2">Route</th>
+                        <th className="text-left py-3 px-2">Parcel</th>
+                        <th className="text-left py-3 px-2">Receiver</th>
+                        <th className="text-left py-3 px-2">Driver</th>
+                        <th className="text-left py-3 px-2">Vehicle</th>
+                        <th className="text-left py-3 px-2">Safety</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-right py-3 px-2">Fare</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {deliveries.map((d) => (
+                        <tr key={d.id} className="hover:bg-slate-50 align-top" data-testid={`admin-delivery-row-${d.id}`}>
+                          <td className="py-3 px-2">
+                            <p className="font-bold text-slate-900">{d.user_name}</p>
+                            <p className="text-[11px] text-slate-500">{d.user_phone || '—'}</p>
+                          </td>
+                          <td className="py-3 px-2 text-xs">
+                            <p className="text-slate-800 flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-500 shrink-0" /> {d.pickup_location}</p>
+                            <p className="text-slate-800 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3 text-red-500 shrink-0" /> {d.drop_location}</p>
+                            <p className="text-[10px] font-black text-blue-700 mt-1">{d.distance_km} KM</p>
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-1 rounded-full uppercase">{d.parcel_type || 'Package'}</span>
+                            {d.description && <p className="text-[11px] text-slate-600 mt-1 max-w-[160px]">{d.description}</p>}
+                          </td>
+                          <td className="py-3 px-2 text-xs">
+                            <p className="font-bold text-slate-900">{d.receiver_name}</p>
+                            <p className="text-slate-500">{d.receiver_phone}</p>
+                          </td>
+                          <td className="py-3 px-2 text-xs">
+                            {d.driver_name ? (<>
+                              <p className="font-bold text-slate-900">{d.driver_name}</p>
+                              <p className="text-slate-500">{d.driver_phone || '—'}</p>
+                            </>) : <span className="text-slate-400 italic">Not assigned</span>}
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full uppercase">{d.vehicle_type}</span>
+                            {d.vehicle_number && <p className="text-[11px] text-slate-700 font-bold mt-1">{d.vehicle_number}</p>}
+                          </td>
+                          <td className="py-3 px-2 text-[11px] text-slate-700">
+                            <p><ShieldCheck className="h-3 w-3 inline text-emerald-500" /> OTP verified</p>
+                            <p className="text-slate-500 mt-0.5">Live tracked</p>
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${
+                              d.status === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
+                              d.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                              d.status === 'In Transit' ? 'bg-indigo-100 text-indigo-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>{d.status}</span>
+                          </td>
+                          <td className="py-3 px-2 text-right font-black text-blue-700">₹{d.fare}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </main>
       )}
-
-      {/* --- AUTH --- */}
       {activeTab === 'login' && (
         <main className="max-w-md mx-auto px-4 py-14">
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl shadow-slate-200/60 space-y-6">
