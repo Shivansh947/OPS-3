@@ -1583,12 +1583,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* Delivery history */}
+          {/* Delivery history — show only the latest delivery for this user */}
           {deliveries.length > 0 && (
             <div>
-              <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3">Your deliveries</h2>
+              <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3">Your latest delivery</h2>
               <div className="space-y-3">
-                {deliveries.map(d => (
+                {[deliveries[0]].map(d => (
                   <div key={d.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between" data-testid={`delivery-history-${d.id}`}>
                     <div>
                       <div className="flex items-center gap-2">
