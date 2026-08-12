@@ -114,10 +114,15 @@ code {
     }
 }
 
-/* Keep Leaflet controls below overlays/modals to prevent bleed-through */
+/* Keep Leaflet controls below overlays/modals and the sticky header to prevent bleed-through */
 .leaflet-pane,
 .leaflet-top,
 .leaflet-bottom {
-    z-index: 400 !important;
+    z-index: 1 !important;
+}
+.leaflet-container {
+    position: relative;
+    isolation: isolate;
+    z-index: 0;
 }
 

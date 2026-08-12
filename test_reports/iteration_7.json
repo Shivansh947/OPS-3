@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only regression for the sticky-header vs Leaflet map z-index bug. Loaded the home page (Ride tab) and Delivery page, verified computed styles and used elementFromPoint at the header center after scrolling to confirm the header is fully above the map. Both pages pass. Screenshots captured show OPS logo, nav (Ride/Rentals/Delivery/Safety/How it works), notifications bell, Log In and Sign Up buttons all cleanly rendered above the map area with no bleed-through.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_details": {
+    "header_computed": {"position": "sticky", "zIndex": "1000", "top": "0px"},
+    "leaflet_computed": {"pane_zIndex": "1", "container_zIndex": "0", "container_position": "relative", "container_isolation": "isolate"},
+    "elementFromPoint_at_header_center_ride": "DIV inside <header> (isInsideHeader=true) — no leaflet element bleeding",
+    "elementFromPoint_at_header_center_delivery": "DIV inside <header> (isInsideHeader=true) — no leaflet element bleeding",
+    "screenshots": ["/app/.screenshots/ride_scrolled.png", "/app/.screenshots/delivery_scrolled.png"]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix is clean and minimal: header uses z-[1000] and MapView container gets isolation:isolate + z-index:0 to create a local stacking context so Leaflet's internal z-index (up to 700 for popup pane) is contained. This is the right approach.",
+    "Note: Leaflet's popup pane uses z-index 700 internally; the global override '.leaflet-pane { z-index: 1 !important }' also flattens popups/tooltips/markers inside the map. Not an issue currently (map has no popups) but if popups are added later, they may render behind markers. Consider scoping the !important overrides or relying solely on `isolation: isolate` on the container."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "user@ops.com/user123 (not needed — bug reproducible on public home page)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Header z-index bug fully resolved on both Ride and Delivery pages. Verified via computed-style probe + elementFromPoint at header midpoint after scroll. Prior iterations already covered ride/delivery booking flows, cancel modal above map (z-[9999]), and Rapido fare math — no regression suspected as only CSS z-index/isolation changed."
+}

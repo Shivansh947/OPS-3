@@ -685,7 +685,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white">
       {/* --- HEADER --- */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
+      <header className="sticky top-0 z-[1000] bg-white/90 backdrop-blur border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <button onClick={() => setActiveTab('home')} data-testid="ops-logo-btn" className="flex items-center space-x-2.5">
