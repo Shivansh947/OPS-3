@@ -1,0 +1,22 @@
+{
+  "summary": "Verified the delivery fare consistency bug fix. Backend now uses base_fees {Bike:15,Auto:25,Car:40} and per_km {Bike:5,Auto:7,Car:10} rounded to integer — matching the frontend dlvEstimateFare. Added 6 parametrized delivery-fare tests to /app/backend/tests/test_fares_delivery.py covering Bike/Auto/Car at 17.04 km (100/144/210) and 10 km (65/95/140). All 9 tests in that file pass. Frontend E2E via Playwright: quick-login rider → Delivery tab → Connaught Place → Cyber City Gurgaon (21.52 km) → Bike → verified top blue box shows ₹123, 'Book delivery · ₹123' button shows ₹123, and after booking, the 'Your Deliveries' history entry also shows ₹123. All three amounts match exactly — bug fixed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_fares_delivery.py",
+    "/app/test_reports/pytest/iter6_delivery.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Delivery pricing constants are duplicated between backend server.py L775-776 and frontend App.js L439-440. If either side changes, they will drift again. Recommend a shared /api/deliveries/estimate endpoint (already flagged in earlier iterations).",
+    "App.js is 2066 lines — still recommend splitting into feature views."
+  ],
+  "updated_files": ["/app/backend/tests/test_fares_delivery.py"],
+  "success_rate": {"backend": "100% (9/9 fare+delivery tests)", "frontend": "100% (top box == button == history list)"},
+  "test_credentials": "user@ops.com/user123, driver@ops.com/driver123, admin@ops.com/admin123",
+  "seed_data_creation": "One TEST delivery created via E2E (Connaught Place → Cyber City, Bike, ₹123)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Delivery fare sync is fixed and covered. Backend formula: round(base + km * per_km) with Bike:15+5, Auto:25+7, Car:40+10. Duplicated on frontend App.js L438-442. Any future pricing change must be applied to BOTH places, or migrated to a shared /api/deliveries/estimate endpoint.",
+  "rca of the issue": "Reported issue: top of Delivery page showed ₹100 (Bike 17.04 km) while the 'Your Deliveries' list entry for the same booking showed ₹161.32. RCA: Backend create_delivery() used base_fees {Bike:25} + 8/km per_km rates (fare = 25 + 17.04*8 = 161.32) while frontend dlvEstimateFare() computed with base 15 + 5/km (fare = 100). Two independent hard-coded pricing tables drifted. Fix by main agent: backend server.py L775-776 updated to base {Bike:15,Auto:25,Car:40} and per_km {Bike:5,Auto:7,Car:10} with round() → integer. Verified 6 (vehicle × distance) combinations at API level and one end-to-end E2E where card, button, and history row all print ₹123 for 21.52 km Bike."
+}

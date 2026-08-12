@@ -107,6 +107,16 @@ export default function App() {
   const [authPhone, setAuthPhone] = useState('');
   const authConfig = () => ({ withCredentials: true, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
 
+  // Normalize FastAPI/axios errors — sometimes `detail` is a string, sometimes
+  // an array of Pydantic validation objects. Render-safe string always.
+  const errMsg = (err, fallback) => {
+    const d = err?.response?.data?.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) return d.map(x => (x?.msg || JSON.stringify(x))).join(', ') || fallback;
+    if (d && typeof d === 'object') return d.msg || JSON.stringify(d);
+    return err?.message || fallback;
+  };
+
   useEffect(() => { fetchMe(); fetchWeather(); }, [token]);
 
   useEffect(() => {
@@ -264,7 +274,7 @@ export default function App() {
       localStorage.setItem('ops_user', JSON.stringify(res.data.user));
       setSuccessMsg(`Welcome back, ${res.data.user.name}!`);
       setActiveTab(res.data.user.role === 'driver' ? 'driver_dashboard' : res.data.user.role === 'admin' ? 'admin_panel' : 'home');
-    } catch (err) { setError(err.response?.data?.detail || 'Login failed'); }
+    } catch (err) { setError(errMsg(err, 'Login failed')); }
     finally { setLoading(false); }
   };
   const handleSignup = async (e) => {
@@ -280,7 +290,7 @@ export default function App() {
       localStorage.setItem('ops_user', JSON.stringify(res.data.user));
       setSuccessMsg('Account created!');
       setActiveTab(authRole === 'driver' ? 'driver_dashboard' : authRole === 'admin' ? 'admin_panel' : 'home');
-    } catch (err) { setError(err.response?.data?.detail || 'Signup failed'); }
+    } catch (err) { setError(errMsg(err, 'Signup failed')); }
     finally { setLoading(false); }
   };
   const quickLogin = async (role) => {
@@ -297,7 +307,7 @@ export default function App() {
       localStorage.setItem('ops_user', JSON.stringify(res.data.user));
       setSuccessMsg(`Welcome back, ${res.data.user.name}!`);
       setActiveTab(res.data.user.role === 'driver' ? 'driver_dashboard' : res.data.user.role === 'admin' ? 'admin_panel' : 'home');
-    } catch (err) { setError(err.response?.data?.detail || 'Login failed'); }
+    } catch (err) { setError(errMsg(err, 'Login failed')); }
     finally { setLoading(false); }
   };
 
@@ -324,7 +334,7 @@ export default function App() {
       }
       setSuccessMsg('Ride requested. Finding a nearby captain...');
       fetchRides();
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to book ride'); }
+    } catch (err) { setError(errMsg(err, 'Failed to book ride')); }
     finally { setLoading(false); }
   };
   const updateRideStatus = async (rideId, newStatus) => {
@@ -334,7 +344,7 @@ export default function App() {
       setCurrentRide(res.data);
       fetchRides();
       setSuccessMsg(`Ride status: ${newStatus}`);
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to update status'); }
+    } catch (err) { setError(errMsg(err, 'Failed to update status')); }
   };
   const cancelRide = async () => {
     if (!currentRide) return;
@@ -347,7 +357,7 @@ export default function App() {
       setCancellationModalOpen(false);
       setSuccessMsg(`Fair fare recalculated: ₹${res.data.revised_fare} for distance travelled.`);
       fetchRides();
-    } catch (err) { setError(err.response?.data?.detail || 'Cancellation failed'); }
+    } catch (err) { setError(errMsg(err, 'Cancellation failed')); }
     finally { setLoading(false); }
   };
   const bookRental = async (pkg) => {
@@ -361,7 +371,7 @@ export default function App() {
       }, authConfig());
       setSuccessMsg(`Booked ${pkg.name} (${pkg.vehicleType}). ₹${pkg.price} cash on handover.`);
       fetchRentals(); setActiveTab('my_rides');
-    } catch (err) { setError(err.response?.data?.detail || 'Rental booking failed'); }
+    } catch (err) { setError(errMsg(err, 'Rental booking failed')); }
     finally { setLoading(false); }
   };
   const updateRentalStatus = async (rentalId, newStatus) => {
@@ -369,7 +379,7 @@ export default function App() {
       await axios.put(`${API}/rentals/${rentalId}/status`, { status: newStatus }, authConfig());
       fetchRentals();
       setSuccessMsg(`Rental: ${newStatus}`);
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to update rental'); }
+    } catch (err) { setError(errMsg(err, 'Failed to update rental')); }
   };
   const submitFeedback = async (e) => {
     e.preventDefault();
@@ -378,7 +388,7 @@ export default function App() {
         { rating, comment, issue_report: issueReport },
         authConfig());
       setFeedbackModalOpen(false); setSuccessMsg('Thanks for the feedback!'); fetchRides();
-    } catch (err) { setError(err.response?.data?.detail || 'Feedback failed'); }
+    } catch (err) { setError(errMsg(err, 'Feedback failed')); }
   };
 
   // Delivery geocode pickup
@@ -462,7 +472,7 @@ export default function App() {
       setCurrentDelivery(res.data);
       setSuccessMsg('Delivery requested. Finding a nearby OPS captain...');
       fetchDeliveries();
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to book delivery'); }
+    } catch (err) { setError(errMsg(err, 'Failed to book delivery')); }
     finally { setLoading(false); }
   };
 
@@ -472,7 +482,7 @@ export default function App() {
       setCurrentDelivery(res.data);
       fetchDeliveries();
       setSuccessMsg(`Delivery: ${newStatus}`);
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to update delivery'); }
+    } catch (err) { setError(errMsg(err, 'Failed to update delivery')); }
   };
 
   const pushCaptainTracking = async (rideId, lat, lng, speed) => {
@@ -530,7 +540,7 @@ export default function App() {
         lat: pos?.lat, lng: pos?.lng, note: 'Emergency raised from app'
       }, authConfig());
       setSuccessMsg('SOS sent. Our team has been notified. Stay safe.');
-    } catch (err) { setError(err.response?.data?.detail || 'SOS failed'); }
+    } catch (err) { setError(errMsg(err, 'SOS failed')); }
   };
 
   // Upload delivery photo proof (captain side)
@@ -549,7 +559,7 @@ export default function App() {
           }, authConfig());
           setSuccessMsg('Drop-off photo uploaded.');
           fetchDeliveries();
-        } catch (err) { setError(err.response?.data?.detail || 'Proof upload failed'); }
+        } catch (err) { setError(errMsg(err, 'Proof upload failed')); }
         finally { setUploadingProof(false); }
       };
       reader.readAsDataURL(file);

@@ -771,12 +771,12 @@ async def update_ride_tracking(ride_id: str, data: TrackingUpdate, current_user:
 # --- Deliveries Endpoints ---
 @api_router.post("/deliveries")
 async def create_delivery(data: DeliveryCreate, current_user: dict = Depends(get_current_user)):
-    # Delivery fare (slightly higher than ride to cover handoff, but still affordable)
-    base_fees = {"Bike": 25, "Auto": 40, "Car": 60}
-    per_km_rates = {"Bike": 8, "Auto": 11, "Car": 14}
+    # Delivery fare (matches client-side dlvEstimateFare in App.js so top total and list stay in sync)
+    base_fees = {"Bike": 15, "Auto": 25, "Car": 40}
+    per_km_rates = {"Bike": 5, "Auto": 7, "Car": 10}
     v_type = data.vehicle_type
     fare = base_fees[v_type] + (data.distance_km * per_km_rates[v_type])
-    fare = round(fare, 2)
+    fare = round(fare)
 
     delivery_id = str(uuid.uuid4())
     delivery_doc = {
