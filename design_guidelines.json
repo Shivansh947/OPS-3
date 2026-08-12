@@ -1,0 +1,42 @@
+{
+  "app_name": "OPS - On Time Providing Service",
+  "archetype": "The Performance Pro & High-Contrast Precision",
+  "typography": {
+    "heading": "Outfit, sans-serif",
+    "body": "Inter, sans-serif"
+  },
+  "colors": {
+    "primary": "#0066FF",
+    "primary_dark": "#0052CC",
+    "background_dark": "#0A0A0A",
+    "surface_dark": "#161618",
+    "border_dark": "#2A2A2E",
+    "accent_blue": "#00F0FF",
+    "accent_orange": "#FF6B00",
+    "text_main": "#F8FAFC",
+    "text_muted": "#94A3B8"
+  },
+  "component_path": "/app/frontend/src",
+  "instructions_to_main_agent": [
+    "Ensure all interactive elements have data-testid attributes.",
+    "Support multi-user login (Customer, Driver, Delivery).",
+    "Implement multi-driver request dispatch with nearest driver priority matching and notifications displaying driver name, photo, and bike/auto/car number.",
+    "Display explicit Bike, Auto, and Car price cards in the booking header and fare calculation box consistently.",
+    "Include ML-based dynamic fare calculation considering distance, weather, speed, and demand.",
+    "Provide mid-ride cancellation with reasons (Weather, Breakdown, etc.) and fair fare recalculation.",
+    "Support real-time weather monitoring and ride status tracking.",
+    "Provide final payment modal and post-ride rating/feedback (1-5 stars & comments)."
+  ],
+  "image_urls": [
+    {
+      "category": "scooter_transport",
+      "url": "https://images.unsplash.com/photo-1611956292173-c2445aa61709?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHxlbGVjdHJpYyUyMHNjb290ZXIlMjBjaXR5JTIwc3RyZWV0fGVufDB8fHx8MTc4NjU0ODEzMXww&ixlib=rb-4.1.0&q=85",
+      "description": "Urban electric ride and delivery vehicle"
+    }
+  ],
+  "universal_guidelines": {
+    "contrast": "WCAG AA compliant with APCA standards",
+    "accessibility": "Full keyboard navigation and ARIA labels",
+    "testing": "All buttons and inputs must have data-testid attributes"
+  }
+}

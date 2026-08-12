@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 5: Verified demo-login block removal, forced OPS browser title, and login flows for all 3 seed accounts. Backend 12/12 pytest passed. One frontend bug found: direct navigation to /login when logged out redirects to / instead of showing login form (useEffect ordering issue).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "/login URL sync when logged out",
+        "issue": "Direct navigation to /login redirects to / and does NOT render the login form. Root cause: In App.js the sync effect (L590) runs on mount with default activeTab='home'; because pathname==='/login', it pushState to '/'. The subsequent mount-only effect (L598) then reads pathname==='/', so activeTab is never set to 'login'. Fix: put the pathname-init effect BEFORE the sync effect, gate sync with a hasMounted ref, or lazily initialize useState('home' | 'login') from window.location.pathname.",
+        "affected_selectors": ["input[type='email']", "[data-testid='login-nav-btn']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ops_api.py",
+    "/app/test_reports/pytest/pytest_results_iter5.xml"
+  ],
+  "action_items": [
+    "Fix /login URL sync: reorder useEffects in App.js (~L588-607). Either (a) lazily initialize `activeTab` from window.location.pathname in useState, or (b) add a `didMount` ref so the sync effect skips its first run, or (c) move the pathname->activeTab init effect above the sync effect and add `user` to its dependency array. Everything else in the review request is passing."
+  ],
+  "critical_code_review_comments": [
+    "App.js is 1920 lines — should be split (login screen, home, driver dashboard, admin panel, delivery, rentals into separate components).",
+    "Two useEffects (L590 and L598) both touch pathname/activeTab and create a race on mount that broke deep-linking to /login.",
+    "document.title is force-set every 1500ms via setInterval; acceptable given Emergent overlay may override, but a MutationObserver on <title> would be cheaper than a polling interval."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "~90% (1 URL-sync bug)"},
+  "test_credentials": "user@ops.com/user123, driver@ops.com/driver123, admin@ops.com/admin123 — all working",
+  "seed_data_creation": "None new; existing seed + prior TEST_* rows from earlier iterations still present.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green (12/12 in test_ops_api.py). Demo login block confirmed removed. Browser title forced to 'OPS – On Time Providing Services' successfully. Only remaining issue: /login deep-link doesn't render the login form due to useEffect ordering in App.js around lines 588-607.",
+  "rca of the issue": "Bug: GET /login shows home page instead of login form when logged out. Reproduction: (1) clear cookies + localStorage, (2) visit https://iske-website.preview.emergentagent.com/login, (3) observe URL is rewritten to / and homepage renders. RCA: React runs effects in declaration order after first render. The sync effect at App.js L590 (deps=[activeTab]) fires on mount seeing activeTab='home' (default) and pathname='/login'; it pushState('/'). Immediately after, the mount-only effect at L598 checks pathname — now '/' — so it never sets activeTab='login'. Mitigation: lazy initializer -> `useState(() => window.location.pathname === '/login' ? 'login' : 'home')`, OR add a didMountRef guard to the sync effect so it skips first run."
+}

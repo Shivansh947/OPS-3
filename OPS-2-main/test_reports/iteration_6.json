@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 6: Verified /login deep-link fix and vehicle-marker halo removal. Found and fixed a REMAINING /login regression: fetchMe's 401 catch called logout() on initial anonymous mount, which reset activeTab back to 'home' and pushState to '/'. Wrapped logout() call to only fire when there was an existing token/user. After the fix: /login deep-link renders the login form and URL stays /login. Header 'Log In' click flips URL to /login. All 3 seed accounts login and route correctly. Backend pytest: 12/12 green. Vehicle-marker source in MapView.jsx confirmed correct (plain 20px blue dot, no car emoji, no wide halo). Live map on active ride currently shows only pickup(green)+destination(red) markers because captain_location is null on the tested ride; vehicle marker code verified via source inspection.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ops_api.py",
+    "/app/test_reports/pytest/pytest_iter6.xml"
+  ],
+  "action_items": [
+    "None – critical /login deep-link bug fixed by testing agent (fetchMe catch guarded). Please retest end-to-end once and confirm.",
+    "Optional: verify vehicle marker visually by triggering captain_location broadcast on an active ride (source code already correct)."
+  ],
+  "critical_code_review_comments": [
+    "App.js is 1923 lines – strongly recommend splitting (Auth, Booking, Delivery, Rentals, Driver, Admin views) into separate modules. File-size lint threshold >700 lines is breached.",
+    "fetchMe previously called logout() on any /auth/me failure including initial anonymous load — this reset routing state. Fixed by gating on (token || user). Consider a dedicated 'session bootstrap' effect that runs once and doesn't disturb routing.",
+    "The two /login-sync useEffects rely on window.history manipulation. Consider migrating to react-router to avoid re-inventing this and prevent similar regressions.",
+    "Multiple duplicated fetch patterns (fetchRides/fetchRentals/fetchDeliveries) — extract a useAuthedFetch hook."
+  ],
+  "updated_files": [
+    "/app/frontend/src/App.js (fetchMe catch now guards logout on anonymous initial load)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "user@ops.com/user123, driver@ops.com/driver123, admin@ops.com/admin123 – all working",
+  "seed_data_creation": "None (used existing seed accounts)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The /login deep-link fix required TWO changes: (a) lazy useState init of activeTab from window.location.pathname, (b) didMountRef guard, AND (c) the missing piece I added — fetchMe's catch must NOT call logout() on initial anonymous mount since logout() setActiveTab('home') overrides the lazy 'login' init. If regressions recur, check fetchMe first.",
+  "rca of the issue": "RCA: On direct navigation to /login while logged out: activeTab lazy-inits to 'login'. On mount, useEffect([token]) fires fetchMe(). Backend returns 401 (no cookie). The catch called logout() which does setActiveTab('home'). Then the /login-sync effect (didMountRef now true after first run) sees activeTab!='login' and path='/login', pushes state to '/'. Net effect: URL flips to / and homepage renders. Fix: only call logout() from fetchMe catch when (token || user) is truthy, so anonymous initial load is a no-op."
+}

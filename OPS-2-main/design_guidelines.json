@@ -1,0 +1,85 @@
+{
+  "project": {
+    "name": "ops-main website recreation",
+    "context": "hybrid_fullstack",
+    "language": "English",
+    "platforms": ["desktop", "mobile"],
+    "source_status": "The requested ops-main.zip was not present in /app during discovery. No reference screenshots, images, text, or branding assets were available. Do not invent a replacement visual identity when the archive becomes available; re-audit and substitute the exact source values.",
+    "success_actions": ["complete the primary navigation flow", "submit and receive backend data", "understand the current page state", "use every primary action with keyboard or touch"]
+  },
+  "discovery": {
+    "audience": "Unknown until the reference archive is supplied; implementation should preserve the source audience and terminology rather than infer a new persona.",
+    "key_tasks": ["navigate primary pages", "view source-backed content", "create or submit the source workflow", "receive success and error feedback"],
+    "emotional_tone": "Reference-led; no new mood should override the original.",
+    "theme": "Reference-led. If the archive remains unavailable, use a neutral light base with a dark structural header and an explicit theme toggle only if the source demonstrates both themes.",
+    "research_notes": [
+      "Current responsive guidance favors mobile-first structure, content-based breakpoints, fluid typography, responsive media, 44px touch targets, and progressive disclosure.",
+      "These are implementation safeguards, not permission to redesign the missing source."
+    ]
+  },
+  "design_variants": [
+    {"name":"Exact Archive Audit","probability":0.7,"direction":"Reconstruct source screenshots/assets/content exactly; visual fidelity is the priority."},
+    {"name":"Reference With Responsive Repair","probability":0.15,"direction":"Keep desktop geometry and typography, then repair overflow and touch states on small screens."},
+    {"name":"Reference With Accessible Contrast","probability":0.08,"direction":"Preserve hue and hierarchy while correcting contrast, focus, labels, and error visibility."},
+    {"name":"Reference With Operational Density","probability":0.05,"direction":"For data-heavy source screens, preserve dense grid relationships and cardless borders."},
+    {"name":"Reference With Motion Restraint","probability":0.02,"direction":"Retain meaningful source transitions only; reduce decorative motion under prefers-reduced-motion."}
+  ],
+  "typography": {
+    "rule": "Extract the exact font family, weights, sizes, line heights, and letter spacing from the archive before implementation.",
+    "fallback": {"headings":"Georgia, serif","body":"IBM Plex Sans, Arial, sans-serif","code":"Source Code Pro, monospace"},
+    "hierarchy": {"h1":"clamp(2.25rem, 5vw, 3.75rem)","h2":"clamp(1.5rem, 3vw, 2.25rem)","h3":"1.25rem to 1.5rem","body":"1rem, 1.55 line-height","label":"0.75rem, uppercase, 0.18em tracking"},
+    "guidance": ["Do not use Inter for headings unless the reference explicitly does.","Keep paragraph text left aligned and readable.","Use tight leading for display headings and relaxed leading for body copy."]
+  },
+  "colors": {
+    "source_of_truth": "Reference archive CSS, screenshots, and assets.",
+    "fallback_neutrals": {"paper":"#F6F4EF","ink":"#20252B","muted":"#667078","line":"#D9D5CC","surface":"#FFFDF8"},
+    "fallback_accent": "#C9513E",
+    "rules": ["Never use pure #000000 or #808080.","Keep primary color for actions and active states only.","Normal text must meet 4.5:1 contrast; large text and controls at least 3:1.","No complete transparent backgrounds under readable content; use solid or blurred semi-opaque surfaces."]
+  },
+  "page_structure": {
+    "global": ["solid or glass-backed navigation with brand and 3-5 visible desktop links", "main content region", "source-specific footer"],
+    "routing": "Map every source URL to a React Router route. Preserve URL labels and active navigation state.",
+    "states": ["initial loading", "loaded", "empty", "validation error", "server error", "success confirmation", "disabled/submitting"]
+  },
+  "layouts": {
+    "base": "Mobile-first single column, then expand only where source geometry supports it.",
+    "desktop": "Use source grid measurements. If unavailable, use an asymmetric 12-column grid with generous gap-8 to gap-12.",
+    "mobile": "Stack primary content; preserve source reading order; collapse secondary navigation into an accessible drawer; cap images at max-height:80vh.",
+    "container": "max-width: 1280px; horizontal padding 1rem mobile, 2rem tablet, 3rem desktop unless archive proves otherwise.",
+    "spacing": "Use a measured 4/8/16/24/32 scale; bordered regions require p-6 or p-8. Do not center the entire app container."
+  },
+  "grids": {
+    "marketing_or_visual": "grid-cols-1 md:grid-cols-8 lg:grid-cols-12; mix dominant, square, tall, and breathing-room spans.",
+    "dashboard_or_data": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4; tight gap-4 to gap-6; primary data spans 2 columns and feed spans 1-2 rows.",
+    "implementation": "Grid items must be direct children; animated motion.div elements must carry the grid classes directly."
+  },
+  "component_patterns": {
+    "component_path": "/app/frontend/src/components/",
+    "recommended_files": ["Navigation.js", "MobileMenu.js", "PageShell.js", "LoadingState.js", "EmptyState.js", "ErrorState.js", "StatusFeedback.js"],
+    "rules": ["Use existing shadcn primitives in /app/frontend/src/components/ui for dialogs, dropdowns, forms, tabs, and toasts.","Use Sonner for toast feedback.","Use raw HTML and Tailwind for source-specific layout compositions.","Every interactive and key informational element needs a kebab-case data-testid attribute.","Buttons need visible hover, active, focus-visible, and disabled states with explicit text colors."]
+  },
+  "backend": {
+    "base_url": "REACT_APP_BACKEND_URL/api",
+    "existing_routes": ["GET /api/", "POST /api/status", "GET /api/status"],
+    "data_flow": "Use axios with loading, success, validation, and failure states; never silently swallow API errors.",
+    "known_issue": "MongoDB configuration is required by backend/server.py; API flows may not run until MONGO_URL and DB_NAME are available.",
+    "testids": ["navigation-brand-link", "navigation-menu-button", "navigation-primary-link", "status-form-input", "status-form-submit-button", "status-list", "status-success-message", "status-error-message"]
+  },
+  "motion": {
+    "principles": ["Use opacity and transform entrance animations sparingly.","Use specific transitions, never transition: all.","Add hover and press feedback to every action.","Respect prefers-reduced-motion by disabling decorative movement."],
+    "durations": {"micro":"150ms","standard":"220ms","entrance":"450ms"},
+    "decorative": "No gradients or effects should obscure source content; add grain/noise only if the archive contains a textured visual language."
+  },
+  "accessibility": {
+    "requirements": ["Keyboard navigation and visible high-contrast focus rings.","Minimum 44x44px touch targets.","Semantic landmarks and one logical h1 per page.","Labels tied to every form control.","Announce async status with aria-live.","Do not rely on color or motion alone.","Respect reduced motion and zoom/reflow."],
+    "responsive_checks": ["320px, 375px, 768px, 1024px, 1440px", "no horizontal overflow", "desktop links visible without hamburger", "mobile menu has focus management"]
+  },
+  "media": {
+    "image_urls": [],
+    "asset_policy": "Use only images copied from ops-main.zip once available. Preserve filenames, crops, alt meaning, logos, and source text. Do not use placeholder URLs, Unsplash, or invented branding.",
+    "implementation": "Use responsive image sizing, explicit dimensions, object-fit matching the source, and meaningful alt text."
+  },
+  "3d_libraries": {"use": false,"reason":"No evidence in the available starter project or missing archive requires 3D. Do not add R3F, canvas, or decorative WebGL to a fidelity recreation without source evidence."},
+  "general_ui_ux_design_guidelines": ["Recreate before improving: source evidence outranks trends.","Keep navigation visible on desktop and provide an accessible mobile drawer.","Use layered surfaces, crisp borders, and intentional negative space instead of generic gradients.","Preserve branding, copy, hierarchy, and image treatment from the archive.","Use explicit loading, empty, error, success, and disabled states.","No emoji icons; use lucide-react or the source icon assets.","Customize scrollbars without adding a gutter.","All key controls and content blocks require stable data-testid hooks."],
+  "instructions_to_main_agent": ["First locate and extract ops-main.zip; if it is supplied later, inventory routes, screenshots, CSS tokens, fonts, images, and copy before editing React.","Replace the starter Emergent home screen rather than layering new UI over it.","Implement in .js/.jsx files, not .tsx files.","Verify npm/yarn build and exercise GET /api/, POST /api/status, and GET /api/status; report any MongoDB/API limitation.","Do not claim exact visual parity until the reference archive is available and compared at desktop and mobile widths."]
+}

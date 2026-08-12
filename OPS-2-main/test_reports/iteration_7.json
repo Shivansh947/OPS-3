@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 7 verification of demo-login block removal (user was seeing cached page) and regressions from iter_5/6. Verified via (a) source grep on /app/frontend/src/App.js and (b) live DOM inspection of the auth page in BOTH login and signup modes on the preview URL. Also re-tested real login for all 3 seed accounts, /login deep-link, browser title, and vehicle marker halo/emoji regression.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_results": {
+    "source_grep_App_js": "CLEAN - zero matches for INSTANT DEMO | demo-user-login-btn | demo-driver-login-btn | demo-admin-login-btn | login-hint-card | quickLogin",
+    "dom_login_mode": "No occurrences of forbidden strings in rendered HTML (default view is login mode)",
+    "dom_signup_mode": "No occurrences of forbidden strings after clicking Sign Up toggle",
+    "browser_title": "'OPS – On Time Providing Services' on / and /login",
+    "login_deep_link": "/login while logged-out renders the login form (email/password inputs present)",
+    "real_login_rider": "user@ops.com/user123 -> lands on booking home (hero-book-ride-btn, pickup-input visible)",
+    "real_login_driver": "driver@ops.com/driver123 -> Captain welcome dashboard (accept-ride-* testids, captain-speed-broadcast)",
+    "real_login_admin": "admin@ops.com/admin123 -> OPS Command Center (users/captains/rides/revenue stats visible)",
+    "vehicle_marker_regression": "No car emoji (🚗) in App.js. animate-ping usages at lines 662 & 991 are small status dots (h-2/h-3) inside LIVE badge and LIVE RIDE panel header, NOT a wide vehicle-marker halo. Regression from iter_6 holds."
+  },
+  "note_on_post_login_url": "All 3 roles route to '/' (single-SPA with role-based tab). Content differs correctly per role (rider booking / driver dashboard / admin panel), so 'home/driver_dashboard/admin_panel' expectations map to role-conditional content on '/'. Not a bug.",
+  "test_report_links": ["/app/test_reports/iteration_7.json"],
+  "action_items": [
+    "No code changes needed. The demo login block IS gone from the deployed preview build. If a specific end-user still sees it on ops-safety-first.emergent.host, ask them to hard-refresh (Ctrl+Shift+R) or clear site data — it is a client cache issue, not a code issue.",
+    "Custom domain rollout is a Deploy-flow task, out of code scope as noted."
+  ],
+  "critical_code_review_comments": [
+    "App.js is 1914 lines — recommend splitting into feature modules (Auth, RiderHome, DriverDashboard, AdminPanel, Tracking) for maintainability.",
+    "Two remaining 401 console errors on initial load of / when logged out — likely /api/auth/me probe; safe but noisy. Consider suppressing warn for expected 401 on bootstrap."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not retested this iteration - unchanged)", "frontend": "100%"},
+  "test_credentials": "user@ops.com/user123, driver@ops.com/driver123, admin@ops.com/admin123 — all valid",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter 7 focus was confirming demo-login block removal (already fixed in iter_5). Both source grep and live DOM in login+signup modes are clean. All regressions from iter_5/6 hold. quickLogin function successfully removed. If future iterations touch App.js auth section, re-run the same forbidden-string DOM check in both modes.",
+  "rca of the issue": "Root cause of user's complaint: browser cache. Markup was removed in iteration_5 and re-verified clean in iteration_7 via both source grep and rendered DOM inspection on both login and signup views. Mitigation: user hard-refresh / clear site data."
+}
