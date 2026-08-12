@@ -56,6 +56,7 @@ export default function App() {
 
   // Rentals & Admin
   const [rentals, setRentals] = useState([]);
+  const [adminSubTab, setAdminSubTab] = useState('overview'); // 'overview' | 'rentals'
   const [adminStats, setAdminStats] = useState(null);
 
   // Deliveries
@@ -360,6 +361,56 @@ export default function App() {
     } catch (err) { setError(errMsg(err, 'Cancellation failed')); }
     finally { setLoading(false); }
   };
+  const [rentalKycOpen, setRentalKycOpen] = useState(false);
+  const [rentalPkgSelected, setRentalPkgSelected] = useState(null);
+  const [rentalKyc, setRentalKyc] = useState({
+    kyc_type: 'Aadhar', kyc_number: '', renter_age: '',
+    vehicle_color: '', vehicle_number: '', vehicle_km_driven: '', address: ''
+  });
+  const [bookedRentalKeys, setBookedRentalKeys] = useState(new Set());
+
+  const openRentalKyc = (pkg) => {
+    if (!user) { setActiveTab('login'); setError('Please login to book a rental.'); return; }
+    setRentalPkgSelected(pkg); setRentalKycOpen(true);
+  };
+  const submitRentalBooking = async (e) => {
+    e.preventDefault();
+    if (!rentalPkgSelected) return;
+    const kn = (rentalKyc.kyc_number || '').trim();
+    if (!kn || kn.length < 6) { setError('Please enter a valid Aadhar / Driving Licence number'); return; }
+    const age = parseInt(rentalKyc.renter_age || '0', 10);
+    if (!age || age < 18) { setError('Renter must be 18+ years old'); return; }
+    if (!rentalKyc.vehicle_number.trim()) { setError('Please enter the vehicle registration number'); return; }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/rentals`, {
+        vehicle_type: rentalPkgSelected.vehicleType,
+        package_name: rentalPkgSelected.name,
+        amount: rentalPkgSelected.price,
+        pickup_location: pickup,
+        pickup_coords: pickupCoords ? { lat: pickupCoords.lat, lng: pickupCoords.lng } : undefined,
+        kyc_type: rentalKyc.kyc_type,
+        kyc_number: kn,
+        renter_age: age,
+        vehicle_color: rentalKyc.vehicle_color.trim(),
+        vehicle_number: rentalKyc.vehicle_number.trim(),
+        vehicle_km_driven: parseFloat(rentalKyc.vehicle_km_driven || '0') || 0,
+        address: rentalKyc.address.trim()
+      }, authConfig());
+      const key = `${rentalPkgSelected.vehicleType}-${rentalPkgSelected.price}`;
+      setBookedRentalKeys(prev => { const nx = new Set(prev); nx.add(key); return nx; });
+      // Revert to "Book" after 4 seconds so user can book again
+      setTimeout(() => {
+        setBookedRentalKeys(prev => { const nx = new Set(prev); nx.delete(key); return nx; });
+      }, 4000);
+      setSuccessMsg(`Booked ${rentalPkgSelected.name} (${rentalPkgSelected.vehicleType}). ₹${rentalPkgSelected.price} cash on handover.`);
+      setRentalKycOpen(false);
+      setRentalKyc({ kyc_type: 'Aadhar', kyc_number: '', renter_age: '', vehicle_color: '', vehicle_number: '', vehicle_km_driven: '', address: '' });
+      fetchRentals();
+    } catch (err) { setError(errMsg(err, 'Rental booking failed')); }
+    finally { setLoading(false); }
+  };
+
   const bookRental = async (pkg) => {
     if (!user) { setActiveTab('login'); setError('Please login to book a rental.'); return; }
     setLoading(true);
@@ -1306,11 +1357,17 @@ export default function App() {
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-black text-blue-700">₹{pkg.price}</p>
-                          <button onClick={() => bookRental({ vehicleType: item.type, ...pkg })}
-                            data-testid={`book-rental-${item.type.toLowerCase()}-${pkg.price}`}
-                            className="mt-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-full transition">
-                            Book
-                          </button>
+                          {(() => {
+                            const isBooked = bookedRentalKeys.has(`${item.type}-${pkg.price}`);
+                            return (
+                              <button onClick={() => openRentalKyc({ vehicleType: item.type, ...pkg })}
+                                disabled={isBooked || loading}
+                                data-testid={`book-rental-${item.type.toLowerCase()}-${pkg.price}`}
+                                className={`mt-1 text-white text-xs font-bold px-4 py-1.5 rounded-full transition flex items-center gap-1 ${isBooked ? 'bg-blue-800 cursor-default' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                                {isBooked ? (<><CheckCircle2 className="h-3 w-3" /> Booked</>) : 'Book'}
+                              </button>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
@@ -1648,16 +1705,29 @@ export default function App() {
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center text-slate-500">No rentals booked.</div>
             ) : (
               rentals.map((r) => (
-                <div key={r.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full uppercase">{r.vehicle_type} rental</span>
-                    <p className="text-sm font-bold text-slate-900 mt-1.5">{r.package_name}</p>
-                    <p className="text-xs text-slate-500">Pickup: {r.pickup_location}</p>
+                <div key={r.id} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3" data-testid={`rental-card-${r.id}`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full uppercase">{r.vehicle_type} rental</span>
+                      <p className="text-sm font-bold text-slate-900 mt-1.5">{r.package_name}</p>
+                      <p className="text-xs text-slate-500">Pickup: {r.pickup_location}</p>
+                      <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase mt-1 inline-block">{r.status}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-blue-700" data-testid={`rental-amount-${r.id}`}>₹{r.amount}</p>
+                      <p className="text-[10px] text-slate-500">Cash</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-blue-700">₹{r.amount}</p>
-                    <p className="text-[10px] text-slate-500">Cash</p>
-                  </div>
+                  {(r.kyc_number || r.vehicle_number || r.renter_age) && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 grid grid-cols-2 gap-x-3 gap-y-1.5" data-testid={`rental-kyc-panel-${r.id}`}>
+                      {r.kyc_type && <p><b className="text-slate-500">{r.kyc_type}:</b> {r.kyc_number}</p>}
+                      {r.renter_age ? <p><b className="text-slate-500">Age:</b> {r.renter_age}</p> : null}
+                      {r.vehicle_number && <p><b className="text-slate-500">Vehicle No:</b> {r.vehicle_number}</p>}
+                      {r.vehicle_color && <p><b className="text-slate-500">Color:</b> {r.vehicle_color}</p>}
+                      {r.vehicle_km_driven ? <p><b className="text-slate-500">KM Driven:</b> {r.vehicle_km_driven}</p> : null}
+                      {r.address && <p className="col-span-2"><b className="text-slate-500">Address:</b> {r.address}</p>}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -1816,48 +1886,134 @@ export default function App() {
             <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Admin Control</p>
             <h1 className="text-3xl font-black text-slate-900 mt-1">OPS Command Center</h1>
           </div>
-          {adminStats && (
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              {[
-                { l: 'Users', v: adminStats.users_count, c: 'text-blue-700' },
-                { l: 'Captains', v: adminStats.drivers_count, c: 'text-indigo-700' },
-                { l: 'Rides', v: adminStats.rides_count, c: 'text-emerald-600' },
-                { l: 'Rentals', v: adminStats.rentals_count, c: 'text-amber-600' },
-                { l: 'Deliveries', v: adminStats.deliveries_count || 0, c: 'text-sky-600' },
-                { l: 'Revenue', v: `₹${adminStats.total_revenue}`, c: 'text-emerald-700' }
-              ].map((s, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{s.l}</p>
-                  <p className={`text-2xl font-black ${s.c} mt-1`}>{s.v}</p>
+
+          {/* Admin sub-tabs */}
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-1" data-testid="admin-subtabs">
+            <button onClick={() => setAdminSubTab('overview')} data-testid="admin-tab-overview"
+              className={`px-5 py-2.5 rounded-t-xl text-sm font-black transition ${adminSubTab === 'overview' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+              Overview
+            </button>
+            <button onClick={() => setAdminSubTab('rentals')} data-testid="admin-tab-rentals"
+              className={`px-5 py-2.5 rounded-t-xl text-sm font-black transition flex items-center gap-2 ${adminSubTab === 'rentals' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+              <Bike className="h-4 w-4" /> Rental Dashboard <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full">{rentals.length}</span>
+            </button>
+          </div>
+
+          {adminSubTab === 'overview' && (
+            <>
+              {adminStats && (
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  {[
+                    { l: 'Users', v: adminStats.users_count, c: 'text-blue-700' },
+                    { l: 'Captains', v: adminStats.drivers_count, c: 'text-indigo-700' },
+                    { l: 'Rides', v: adminStats.rides_count, c: 'text-emerald-600' },
+                    { l: 'Rentals', v: adminStats.rentals_count, c: 'text-amber-600' },
+                    { l: 'Deliveries', v: adminStats.deliveries_count || 0, c: 'text-sky-600' },
+                    { l: 'Revenue', v: `₹${adminStats.total_revenue}`, c: 'text-emerald-700' }
+                  ].map((s, i) => (
+                    <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{s.l}</p>
+                      <p className={`text-2xl font-black ${s.c} mt-1`}>{s.v}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6">
+                <h2 className="text-lg font-black text-slate-900 mb-4">Users & Captains</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200">
+                      <tr><th className="text-left py-2">Name</th><th className="text-left py-2">Email</th><th className="text-left py-2">Role</th><th className="text-left py-2">Phone</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {adminStats?.users?.map((u) => (
+                        <tr key={u.id}>
+                          <td className="py-3 font-bold text-slate-900">{u.name}</td>
+                          <td className="py-3 text-slate-600">{u.email}</td>
+                          <td className="py-3">
+                            <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${
+                              u.role === 'admin' ? 'bg-red-100 text-red-700' :
+                              u.role === 'driver' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                            }`}>{u.role}</span>
+                          </td>
+                          <td className="py-3 text-slate-600">{u.phone || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {adminSubTab === 'rentals' && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6" data-testid="admin-rental-dashboard">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">Rental Dashboard</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">All rental bookings with KYC & vehicle details</p>
+                </div>
+                <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full uppercase">
+                  {rentals.length} Total
+                </span>
+              </div>
+              {rentals.length === 0 ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center text-slate-500">
+                  No rental bookings yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[1100px]">
+                    <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left py-3 px-2">Renter</th>
+                        <th className="text-left py-3 px-2">Package</th>
+                        <th className="text-left py-3 px-2">ID Proof</th>
+                        <th className="text-left py-3 px-2">Age</th>
+                        <th className="text-left py-3 px-2">Vehicle</th>
+                        <th className="text-left py-3 px-2">Color</th>
+                        <th className="text-left py-3 px-2">KM</th>
+                        <th className="text-left py-3 px-2">Address</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-right py-3 px-2">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {rentals.map((r) => (
+                        <tr key={r.id} className="hover:bg-slate-50" data-testid={`admin-rental-row-${r.id}`}>
+                          <td className="py-3 px-2">
+                            <p className="font-bold text-slate-900">{r.user_name}</p>
+                            <p className="text-[11px] text-slate-500">{r.user_phone || '—'}</p>
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full uppercase">{r.vehicle_type}</span>
+                            <p className="text-xs text-slate-700 mt-1">{r.package_name}</p>
+                          </td>
+                          <td className="py-3 px-2 text-xs">
+                            {r.kyc_type ? (<><b className="text-slate-800">{r.kyc_type}</b><br /><span className="text-slate-500">{r.kyc_number}</span></>) : '—'}
+                          </td>
+                          <td className="py-3 px-2 text-slate-700">{r.renter_age || '—'}</td>
+                          <td className="py-3 px-2 text-xs font-bold text-slate-800">{r.vehicle_number || '—'}</td>
+                          <td className="py-3 px-2 text-slate-700">{r.vehicle_color || '—'}</td>
+                          <td className="py-3 px-2 text-slate-700">{r.vehicle_km_driven || 0}</td>
+                          <td className="py-3 px-2 text-xs text-slate-600 max-w-[180px] truncate" title={r.address}>{r.address || '—'}</td>
+                          <td className="py-3 px-2">
+                            <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${
+                              r.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                              r.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                              r.status === 'In Use' ? 'bg-indigo-100 text-indigo-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>{r.status}</span>
+                          </td>
+                          <td className="py-3 px-2 text-right font-black text-blue-700">₹{r.amount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6">
-            <h2 className="text-lg font-black text-slate-900 mb-4">Users & Captains</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-[10px] uppercase text-slate-500 border-b border-slate-200">
-                  <tr><th className="text-left py-2">Name</th><th className="text-left py-2">Email</th><th className="text-left py-2">Role</th><th className="text-left py-2">Phone</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {adminStats?.users?.map((u) => (
-                    <tr key={u.id}>
-                      <td className="py-3 font-bold text-slate-900">{u.name}</td>
-                      <td className="py-3 text-slate-600">{u.email}</td>
-                      <td className="py-3">
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${
-                          u.role === 'admin' ? 'bg-red-100 text-red-700' :
-                          u.role === 'driver' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
-                        }`}>{u.role}</span>
-                      </td>
-                      <td className="py-3 text-slate-600">{u.phone || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </main>
       )}
 
@@ -1987,6 +2143,97 @@ export default function App() {
           © {new Date().getFullYear()} OPS · On-Time Providing Services · All rights reserved.
         </div>
       </footer>
+
+      {/* --- RENTAL KYC MODAL --- */}
+      {rentalKycOpen && rentalPkgSelected && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" data-testid="rental-kyc-modal">
+          <form onSubmit={submitRentalBooking} className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Rental Booking</p>
+                <h3 className="text-xl font-black text-slate-900 mt-0.5">{rentalPkgSelected.vehicleType} · {rentalPkgSelected.name}</h3>
+              </div>
+              <button type="button" onClick={() => setRentalKycOpen(false)} data-testid="close-rental-kyc-btn"
+                className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-700">Total (Cash on handover)</span>
+              <span className="text-2xl font-black text-blue-700" data-testid="rental-kyc-price">₹{rentalPkgSelected.price}</span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-600">ID Proof</label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {['Aadhar', 'Driving Licence'].map(t => (
+                    <button key={t} type="button" onClick={() => setRentalKyc({ ...rentalKyc, kyc_type: t })}
+                      data-testid={`kyc-type-${t.toLowerCase().replace(' ', '-')}-btn`}
+                      className={`py-2.5 rounded-xl text-sm font-bold border ${rentalKyc.kyc_type === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-300'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600">{rentalKyc.kyc_type} Number</label>
+                <input required value={rentalKyc.kyc_number} onChange={e => setRentalKyc({ ...rentalKyc, kyc_number: e.target.value })}
+                  data-testid="kyc-number-input" placeholder={rentalKyc.kyc_type === 'Aadhar' ? 'xxxx-xxxx-xxxx' : 'DL-XX-XXXX-XXXXXXX'}
+                  className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-600">Age</label>
+                  <input required type="number" min="18" value={rentalKyc.renter_age} onChange={e => setRentalKyc({ ...rentalKyc, renter_age: e.target.value })}
+                    data-testid="kyc-age-input" placeholder="e.g. 25"
+                    className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600">Vehicle Color</label>
+                  <input value={rentalKyc.vehicle_color} onChange={e => setRentalKyc({ ...rentalKyc, vehicle_color: e.target.value })}
+                    data-testid="kyc-color-input" placeholder="e.g. Red"
+                    className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-600">Vehicle Number</label>
+                  <input required value={rentalKyc.vehicle_number} onChange={e => setRentalKyc({ ...rentalKyc, vehicle_number: e.target.value })}
+                    data-testid="kyc-vehicle-number-input" placeholder="DL 01 AB 1234"
+                    className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 uppercase" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600">KM Driven</label>
+                  <input type="number" min="0" value={rentalKyc.vehicle_km_driven} onChange={e => setRentalKyc({ ...rentalKyc, vehicle_km_driven: e.target.value })}
+                    data-testid="kyc-km-input" placeholder="e.g. 12500"
+                    className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600">Address</label>
+                <textarea value={rentalKyc.address} onChange={e => setRentalKyc({ ...rentalKyc, address: e.target.value })}
+                  data-testid="kyc-address-input" placeholder="Full address for handover" rows={2}
+                  className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 resize-none" />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setRentalKycOpen(false)} data-testid="kyc-cancel-btn"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl">Cancel</button>
+              <button type="submit" disabled={loading} data-testid="kyc-submit-btn"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2">
+                {loading ? 'Booking…' : (<><CheckCircle2 className="h-4 w-4" /> Confirm · ₹{rentalPkgSelected.price}</>)}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* --- SMART CANCELLATION MODAL --- */}
       {cancellationModalOpen && (

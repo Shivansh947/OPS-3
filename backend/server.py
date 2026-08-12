@@ -179,6 +179,14 @@ class RentalBookingCreate(BaseModel):
     amount: float
     pickup_location: str
     pickup_coords: Optional[dict] = {"lat": 28.6139, "lng": 77.2090}
+    # KYC + vehicle details captured from renter
+    kyc_type: Optional[str] = "Aadhar"    # "Aadhar" | "Driving Licence"
+    kyc_number: Optional[str] = ""
+    renter_age: Optional[int] = None
+    vehicle_color: Optional[str] = ""
+    vehicle_number: Optional[str] = ""
+    vehicle_km_driven: Optional[float] = 0
+    address: Optional[str] = ""
 
 class RentalStatusUpdate(BaseModel):
     status: str  # Assigned, In Use, Completed, Cancelled
@@ -919,11 +927,18 @@ async def create_rental(data: RentalBookingCreate, current_user: dict = Depends(
         "amount": data.amount,
         "pickup_location": data.pickup_location,
         "pickup_coords": data.pickup_coords,
-        "status": "Requested",  # Requested, Assigned, In Use, Completed, Cancelled
+        # KYC & vehicle details from renter
+        "kyc_type": data.kyc_type,
+        "kyc_number": data.kyc_number,
+        "renter_age": data.renter_age,
+        "vehicle_color": data.vehicle_color,
+        "vehicle_number": data.vehicle_number,
+        "vehicle_km_driven": data.vehicle_km_driven,
+        "address": data.address,
+        "status": "Booked",  # Booked, Assigned, In Use, Completed, Cancelled
         "driver_id": None,
         "driver_name": None,
         "driver_phone": None,
-        "vehicle_number": None,
         "captain_location": None,
         "captain_speed_kmh": 0,
         "payment_method": "Cash",
@@ -940,7 +955,7 @@ async def get_rentals(current_user: dict = Depends(get_current_user)):
     elif role == "driver":
         rentals = await db.rentals.find({
             "$or": [
-                {"status": "Requested"},
+                {"status": {"$in": ["Booked", "Requested"]}},
                 {"driver_id": current_user["id"]}
             ]
         }, {"_id": 0}).sort("created_at", -1).to_list(200)

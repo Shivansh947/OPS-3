@@ -148,5 +148,5 @@ def test_create_rental_new_bike_pricing(user_auth):
     assert r.status_code == 200, r.text
     rental = r.json()
     assert rental["amount"] == 149
-    assert rental["status"] == "Requested"
+    assert rental["status"] == "Booked"
     assert rental["driver_id"] is None
