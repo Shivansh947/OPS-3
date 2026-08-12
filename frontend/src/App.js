@@ -1245,11 +1245,11 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { type: 'Bike', icon: Bike, gradient: 'from-blue-500 to-blue-700',
-                packages: [{ name: '2 Hours / 20 KM', price: 299 }, { name: '4 Hours / 40 KM', price: 549 }, { name: '8 Hours / 80 KM', price: 999 }] },
+                packages: [{ name: '2 Hours / 20 KM', price: 149 }, { name: '4 Hours / 40 KM', price: 279 }, { name: '8 Hours / 80 KM', price: 499 }] },
               { type: 'Auto', icon: Navigation, gradient: 'from-sky-500 to-blue-600',
-                packages: [{ name: '2 Hours / 20 KM', price: 449 }, { name: '4 Hours / 40 KM', price: 849 }, { name: '8 Hours / 80 KM', price: 1599 }] },
+                packages: [{ name: '2 Hours / 20 KM', price: 229 }, { name: '4 Hours / 40 KM', price: 429 }, { name: '8 Hours / 80 KM', price: 799 }] },
               { type: 'Car', icon: Car, gradient: 'from-indigo-500 to-blue-700',
-                packages: [{ name: '2 Hours / 20 KM', price: 799 }, { name: '4 Hours / 40 KM', price: 1499 }, { name: '8 Hours / 80 KM', price: 2799 }] }
+                packages: [{ name: '2 Hours / 20 KM', price: 399 }, { name: '4 Hours / 40 KM', price: 749 }, { name: '8 Hours / 80 KM', price: 1399 }] }
             ].map((item) => {
               const Icon = item.icon;
               return (
