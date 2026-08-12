@@ -113,3 +113,11 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+/* Keep Leaflet controls below overlays/modals to prevent bleed-through */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+    z-index: 400 !important;
+}
+

@@ -230,13 +230,15 @@ class FareEstimateRequest(BaseModel):
     demand: str = "normal"
 
 def calculate_fare_options(distance_km: float, duration_min: float = 28, weather_code: int = 0, rain_mm: float = 0):
-    bases = {"Bike": 34, "Auto": 62, "Car": 112}
-    per_km = {"Bike": 8.1, "Auto": 11.4, "Car": 17.2}
-    weather_factor = 1.08 if rain_mm > 2 or weather_code >= 51 else 1.0
+    # Rapido-style low fares
+    bases = {"Bike": 15, "Auto": 25, "Car": 45}
+    per_km = {"Bike": 4.5, "Auto": 6.5, "Car": 9.5}
+    per_min = {"Bike": 0.2, "Auto": 0.25, "Car": 0.3}
+    weather_factor = 1.05 if rain_mm > 2 or weather_code >= 51 else 1.0
     if weather_code >= 95:
-        weather_factor = 1.15
+        weather_factor = 1.1
     return {
-        vehicle: round((bases[vehicle] + distance_km * per_km[vehicle] + duration_min * 0.42) * weather_factor)
+        vehicle: max(round((bases[vehicle] + distance_km * per_km[vehicle] + duration_min * per_min[vehicle]) * weather_factor), bases[vehicle])
         for vehicle in ("Bike", "Auto", "Car")
     }
 
@@ -560,14 +562,15 @@ async def create_ride(data: RideCreate, current_user: dict = Depends(get_current
         float(live_weather.get("rain_mm", 0))
     )
     fare = fare_options[v_type]
-    # Multi-driver dispatch: notify top 5 nearest drivers within 5 km radius
+    # Multi-driver dispatch: notify top 5 nearest drivers within 5 km radius (for display only)
     dispatched = sorted(
         [driver.copy() for driver in DEMO_NEARBY_DRIVERS
          if driver["vehicle_type"] == v_type and driver["distance_km"] <= DISPATCH_RADIUS_KM],
         key=lambda driver: driver["distance_km"]
     )[:DISPATCH_MAX_DRIVERS]
-    # Geographically nearest driver auto-accepts (first-in-sorted-list)
-    assigned = dispatched[0] if dispatched else None
+    # Do NOT auto-assign. Real logged-in drivers will accept from their Captain dashboard.
+    # The nearest dispatched driver is only shown as "notified" for UX.
+    nearest = dispatched[0] if dispatched else None
     
     ride_id = str(uuid.uuid4())
     ride_doc = {
@@ -593,14 +596,18 @@ async def create_ride(data: RideCreate, current_user: dict = Depends(get_current
             "id": d["id"], "name": d["name"], "vehicle_number": d["vehicle_number"],
             "distance_km": d["distance_km"], "eta_min": d["eta_min"], "rating": d["rating"]
         } for d in dispatched],
-        "status": "Accepted" if assigned else "Requested",
-        "driver_id": assigned["id"] if assigned else None,
-        "driver_name": assigned["name"] if assigned else None,
-        "driver_phone": assigned.get("phone", "") if assigned else None,
-        "driver_distance_km": assigned["distance_km"] if assigned else None,
-        "driver_eta_min": assigned["eta_min"] if assigned else None,
-        "vehicle_number": assigned["vehicle_number"] if assigned else None,
-        "driver_rating": assigned.get("rating", 4.8) if assigned else None,
+        "nearest_hint": {
+            "name": nearest["name"], "vehicle_number": nearest["vehicle_number"],
+            "distance_km": nearest["distance_km"], "eta_min": nearest["eta_min"]
+        } if nearest else None,
+        "status": "Requested",
+        "driver_id": None,
+        "driver_name": None,
+        "driver_phone": None,
+        "driver_distance_km": None,
+        "driver_eta_min": None,
+        "vehicle_number": None,
+        "driver_rating": None,
         "captain_location": None,
         "captain_speed_kmh": 0,
         "payment_method": "Cash",

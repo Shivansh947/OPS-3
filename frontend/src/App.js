@@ -426,8 +426,8 @@ export default function App() {
   }, [dlvPickupCoords, dlvDropCoords]);
 
   const dlvEstimateFare = (() => {
-    const base = { Bike: 25, Auto: 40, Car: 60 };
-    const perKm = { Bike: 8, Auto: 11, Car: 14 };
+    const base = { Bike: 15, Auto: 25, Car: 40 };
+    const perKm = { Bike: 5, Auto: 7, Car: 10 };
     return Math.round(base[dlvVehicle] + dlvDistanceKm * perKm[dlvVehicle]);
   })();
 
@@ -619,18 +619,26 @@ export default function App() {
     return () => clearInterval(iv);
   }, [user, currentRide, captainSpeed]);
 
-  // Rider-side poll current ride to receive captain's speed
+  // Rider-side poll current ride to receive captain's speed + status changes
   useEffect(() => {
     if (!user || user.role !== 'user' || !currentRide) return;
-    if (!['Accepted', 'Driver Arriving', 'Ride Started'].includes(currentRide.status)) return;
+    if (!['Requested', 'Accepted', 'Driver Arriving', 'Ride Started'].includes(currentRide.status)) return;
     const iv = setInterval(async () => {
       try {
         const res = await axios.get(`${API}/rides/${currentRide.id}`, authConfig());
         setCurrentRide(res.data);
       } catch { /* ignore */ }
-    }, 4000);
+    }, 3000);
     return () => clearInterval(iv);
   }, [user, currentRide?.id, currentRide?.status]);
+
+  // Driver-side poll incoming requests every 3s so new Requested rides appear
+  useEffect(() => {
+    if (!user || user.role !== 'driver') return;
+    const iv = setInterval(() => { fetchRides(); }, 3000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line
+  }, [user?.id, user?.role]);
 
   // /login route sync
   const didMountRef = useRef(false);
@@ -659,9 +667,9 @@ export default function App() {
   };
 
   const ridePresets = [
-    { type: 'Bike', icon: Bike, tagline: 'Fastest through traffic', base: 20, perKm: 7, tint: 'from-blue-500 to-blue-700' },
-    { type: 'Auto', icon: Navigation, tagline: 'Roomy short-hops', base: 30, perKm: 10, tint: 'from-sky-500 to-blue-600' },
-    { type: 'Car', icon: Car, tagline: 'Full AC comfort', base: 50, perKm: 13, tint: 'from-indigo-500 to-blue-700' }
+    { type: 'Bike', icon: Bike, tagline: 'Fastest through traffic', base: 15, perKm: 4.5, tint: 'from-blue-500 to-blue-700' },
+    { type: 'Auto', icon: Navigation, tagline: 'Roomy short-hops', base: 25, perKm: 6.5, tint: 'from-sky-500 to-blue-600' },
+    { type: 'Car', icon: Car, tagline: 'Full AC comfort', base: 45, perKm: 9.5, tint: 'from-indigo-500 to-blue-700' }
   ];
 
   return (
@@ -1263,11 +1271,11 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { type: 'Bike', icon: Bike, gradient: 'from-blue-500 to-blue-700',
-                packages: [{ name: '2 Hours / 20 KM', price: 149 }, { name: '4 Hours / 40 KM', price: 279 }, { name: '8 Hours / 80 KM', price: 499 }] },
+                packages: [{ name: '2 Hours / 20 KM', price: 99 }, { name: '4 Hours / 40 KM', price: 189 }, { name: '8 Hours / 80 KM', price: 349 }] },
               { type: 'Auto', icon: Navigation, gradient: 'from-sky-500 to-blue-600',
-                packages: [{ name: '2 Hours / 20 KM', price: 229 }, { name: '4 Hours / 40 KM', price: 429 }, { name: '8 Hours / 80 KM', price: 799 }] },
+                packages: [{ name: '2 Hours / 20 KM', price: 149 }, { name: '4 Hours / 40 KM', price: 289 }, { name: '8 Hours / 80 KM', price: 549 }] },
               { type: 'Car', icon: Car, gradient: 'from-indigo-500 to-blue-700',
-                packages: [{ name: '2 Hours / 20 KM', price: 399 }, { name: '4 Hours / 40 KM', price: 749 }, { name: '8 Hours / 80 KM', price: 1399 }] }
+                packages: [{ name: '2 Hours / 20 KM', price: 249 }, { name: '4 Hours / 40 KM', price: 479 }, { name: '8 Hours / 80 KM', price: 899 }] }
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -1708,11 +1716,14 @@ export default function App() {
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center text-slate-500">No ride requests right now.</div>
             ) : (
               myRides.map((ride) => (
-                <div key={ride.id} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                <div key={ride.id} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3" data-testid={`captain-ride-${ride.id}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-bold text-slate-900">Passenger: {ride.user_name}</p>
-                      <p className="text-xs text-slate-500">{ride.distance_km} km · {ride.vehicle_type}</p>
+                      <p className="text-sm font-bold text-slate-900" data-testid={`ride-passenger-${ride.id}`}>Passenger: {ride.user_name}</p>
+                      <p className="text-xs text-slate-500">{ride.distance_km} km · <b className="text-slate-700">{ride.vehicle_type}</b>{ride.vehicle_number ? ` · ${ride.vehicle_number}` : ''}</p>
+                      {ride.driver_name && (
+                        <p className="text-[11px] font-bold text-emerald-700 mt-0.5">Assigned: {ride.driver_name}</p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-black text-blue-700">₹{ride.fare}</p>
@@ -1720,13 +1731,13 @@ export default function App() {
                     </div>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-700 space-y-1">
-                    <p>📍 <b>Pickup:</b> {ride.pickup_location}</p>
-                    <p>🏁 <b>Drop:</b> {ride.destination_location}</p>
+                    <p><MapPin className="h-3.5 w-3.5 inline text-emerald-500" /> <b>Pickup:</b> {ride.pickup_location}</p>
+                    <p><MapPin className="h-3.5 w-3.5 inline text-red-500" /> <b>Drop:</b> {ride.destination_location}</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {ride.status === 'Requested' && (
                       <button onClick={() => updateRideStatus(ride.id, 'Accepted')} data-testid={`accept-ride-${ride.id}`}
-                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl">Accept</button>
+                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl">Accept Ride</button>
                     )}
                     {ride.status === 'Accepted' && (
                       <button onClick={() => updateRideStatus(ride.id, 'Driver Arriving')} data-testid={`arriving-${ride.id}`}
@@ -1734,7 +1745,7 @@ export default function App() {
                     )}
                     {ride.status === 'Driver Arriving' && (
                       <button onClick={() => updateRideStatus(ride.id, 'Ride Started')} data-testid={`start-${ride.id}`}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl">Start ride</button>
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl">Start Ride</button>
                     )}
                     {ride.status === 'Ride Started' && (
                       <button onClick={() => updateRideStatus(ride.id, 'Ride Completed')} data-testid={`complete-${ride.id}`}
@@ -1969,7 +1980,7 @@ export default function App() {
 
       {/* --- SMART CANCELLATION MODAL --- */}
       {cancellationModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" data-testid="cancel-ride-modal">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" data-testid="cancel-ride-modal">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -2005,7 +2016,7 @@ export default function App() {
 
       {/* --- FEEDBACK MODAL --- */}
       {feedbackModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-black text-slate-900">Rate your ride</h3>
