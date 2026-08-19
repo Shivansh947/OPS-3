@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import MapView from './components/MapView';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL.replace(/\/+$/, '');
+const API_BASE = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 const API = `${API_BASE}/api`;
 
 export default function App() {
@@ -1855,7 +1855,7 @@ export default function App() {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Phone</label>
                     <input type="text" value={authPhone} onChange={(e) => setAuthPhone(e.target.value)}
                       data-testid="auth-phone-input"
-                      className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" placeholder="+91â€¦" />
+                      className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" placeholder="+91…" />
                   </div>
                 </>
               )}
@@ -1873,7 +1873,7 @@ export default function App() {
               </div>
               <button type="submit" disabled={loading} data-testid="auth-submit-btn"
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-blue-500/30 transition">
-                {loading ? 'Please waitâ€¦' : authMode === 'login' ? 'Log in' : 'Create account'}
+                {loading ? 'Please wait…' : authMode === 'login' ? 'Log in' : 'Create account'}
               </button>
             </form>
 
@@ -1996,3 +1996,6 @@ export default function App() {
     </div>
   );
 }
+
+
+

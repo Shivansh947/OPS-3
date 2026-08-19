@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import MapView from './components/MapView';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL.replace(/\/+$/, '');
+const API_BASE = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 const API = `${API_BASE}/api`;
 
 export default function App() {
