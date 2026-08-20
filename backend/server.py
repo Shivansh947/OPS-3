@@ -1110,11 +1110,16 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
 
 app.include_router(api_router)
 
-_cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials='*' not in _cors_origins,
-    allow_origins=_cors_origins,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://ops-3-frontend.onrender.com",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
